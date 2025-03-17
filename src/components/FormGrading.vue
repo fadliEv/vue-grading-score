@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref } from 'vue';
-import { submitGradingRequest } from '../services/gradingService';
+import { scanRepositoryBranches, submitGradingRequest } from '../services/gradingService';
 import type { GradingRequest, GradingResponse } from '../model/grading';
 
 const emit = defineEmits<{ 
@@ -15,16 +15,39 @@ const formData = ref<GradingRequest>({
 });
 
 const loading = ref(false);
+const scanning = ref(false); // Loading untuk scan repository
+const branches = ref<string[]>([]); // Menyimpan hasil branch dari API
 
-const addQuestion = () => {
-  formData.value.questions.push('');
+const scanRepository = async () => {
+  if (!formData.value.repository_url.trim()) {
+    emit('grading-error', 'Repository URL is required.');
+    return;
+  }
+
+  scanning.value = true;
+  try {
+    const response = await scanRepositoryBranches(formData.value.repository_url);
+
+    if (response.status === 'success') {
+      branches.value = response.branches;
+    } else {
+      emit('grading-error', 'Failed to fetch branches.');
+    }
+  } catch (error) {
+    emit('grading-error', error instanceof Error ? error.message : 'An error occurred while scanning the repository.');
+  } finally {
+    scanning.value = false;
+  }
 };
 
-const removeQuestion = (index: number) => {
-  formData.value.questions.splice(index, 1);
-};
 
+// Fungsi untuk submit grading
 const submitGrading = async () => {
+  if (!formData.value.branch) {
+    emit('grading-error', 'Please select a branch before submitting.');
+    return;
+  }
+
   loading.value = true;
   try {
     const response = await submitGradingRequest(formData.value);
@@ -35,6 +58,14 @@ const submitGrading = async () => {
     loading.value = false;
   }
 };
+
+const addQuestion = () => {
+  formData.value.questions.push('');
+};
+
+const removeQuestion = (index: number) => {
+  formData.value.questions.splice(index, 1);
+};
 </script>
 
 <template>
@@ -43,36 +74,44 @@ const submitGrading = async () => {
 
     <!-- Repository URL Input -->
     <div class="mb-6">
-      <label class="block text-gray-700 text-sm font-bold mb-2">
-        Repository URL
-      </label>
-      <input 
-        v-model="formData.repository_url"
-        type="text"
-        placeholder="Enter repository URL"
-        class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-      />
-    </div>
+  <label class="block text-gray-700 text-sm font-bold mb-2">Repository URL</label>
+  
+  <div class="flex space-x-2">
+    <input 
+      v-model="formData.repository_url"
+      type="text"
+      placeholder="Enter repository URL"
+      class="flex-1 shadow appearance-none border rounded py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+    />
+    
+    <button
+      @click="scanRepository"
+      :disabled="scanning || !formData.repository_url.trim()"
+      class="bg-yellow-500 hover:bg-yellow-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline disabled:opacity-50"
+    >
+      {{ scanning ? 'Scanning...' : 'Scan' }}
+    </button>
+  </div>
+</div>
 
-    <!-- Branch Input -->
-    <div class="mb-6">
-      <label class="block text-gray-700 text-sm font-bold mb-2">
-        Branch
-      </label>
-      <input 
+    <!-- Branch Selection -->
+    <div v-if="branches.length > 0" class="mb-6">
+      <label class="block text-gray-700 text-sm font-bold mb-2">Branch</label>
+      <select 
         v-model="formData.branch"
-        type="text"
-        placeholder="Enter branch name"
-        class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-      />
+        class="shadow border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+      >
+        <option disabled value="">Select a branch</option>
+        <option v-for="branch in branches" :key="branch" :value="branch">
+          {{ branch }}
+        </option>
+      </select>
     </div>
 
     <!-- Questions Input -->
-    <div class="mb-6">
+    <div v-if="formData.branch" class="mb-6">
       <div class="flex justify-between items-center mb-2">
-        <label class="block text-gray-700 text-sm font-bold">
-          Questions
-        </label>
+        <label class="block text-gray-700 text-sm font-bold">Questions</label>
         <button
           @click="addQuestion"
           type="button"

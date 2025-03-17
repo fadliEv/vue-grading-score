@@ -14,3 +14,9 @@ export interface GradingRequest {
     branch: string;
     questions: string[];
 }
+
+export interface ScanBranchResponse {
+    branches: string[];
+    status: string;
+  }
+  
