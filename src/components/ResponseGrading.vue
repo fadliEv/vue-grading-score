@@ -1,9 +1,8 @@
 <script setup lang="ts">
-import type { GradingResponse } from '../types/grading'
+import { marked } from 'marked';
+import type { GradingResponse } from '../model/grading';
 
-defineProps<{
-  response: GradingResponse | null
-}>()
+defineProps<{ response: GradingResponse | null }>();
 </script>
 
 <template>
@@ -18,8 +17,7 @@ defineProps<{
     </div>
 
     <div class="space-y-6">
-      <div v-for="(detail, index) in response.details" :key="index" 
-           class="border-t pt-4">
+      <div v-for="(detail, index) in response.details" :key="index" class="border-t pt-4">
         <h4 class="font-semibold mb-2">Question {{ index + 1 }}</h4>
         <div class="mb-2 text-sm text-gray-600">{{ detail.question }}</div>
         
@@ -35,7 +33,7 @@ defineProps<{
               {{ detail.result }}
             </span>
           </div>
-          <div class="text-sm whitespace-pre-wrap">{{ detail.reason }}</div>
+          <div class="text-sm whitespace-pre-wrap" v-html="marked(detail.review)"></div>
         </div>
       </div>
     </div>

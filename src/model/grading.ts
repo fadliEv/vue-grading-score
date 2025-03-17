@@ -1,7 +1,7 @@
 export interface GradingQuestion {
     question: string;
     result: 'Lulus' | 'Gagal';
-    reason: string;
+    review: string;
   }
   
 export interface GradingResponse {
@@ -10,6 +10,7 @@ export interface GradingResponse {
 }
   
 export interface GradingRequest {
+    repository_url : string;
     branch: string;
     questions: string[];
 }

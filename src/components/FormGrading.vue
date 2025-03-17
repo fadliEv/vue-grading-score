@@ -1,57 +1,60 @@
 <script setup lang="ts">
-import { ref } from 'vue'
-import type { GradingRequest, GradingResponse } from '../types/grading'
+import { ref } from 'vue';
+import { submitGradingRequest } from '../services/gradingService';
+import type { GradingRequest, GradingResponse } from '../model/grading';
 
-const emit = defineEmits<{
-  (event: 'grading-response', response: GradingResponse): void
-  (event: 'grading-error', error: string): void
-}>()
+const emit = defineEmits<{ 
+  (event: 'grading-response', response: GradingResponse): void;
+  (event: 'grading-error', error: string): void; 
+}>();
 
 const formData = ref<GradingRequest>({
+  repository_url: '',
   branch: '',
   questions: ['']
-})
+});
 
-const loading = ref(false)
+const loading = ref(false);
 
 const addQuestion = () => {
-  formData.value.questions.push('')
-}
+  formData.value.questions.push('');
+};
 
 const removeQuestion = (index: number) => {
-  formData.value.questions = formData.value.questions.filter((_, i) => i !== index)
-}
+  formData.value.questions.splice(index, 1);
+};
 
 const submitGrading = async () => {
-  loading.value = true
-  
+  loading.value = true;
   try {
-    const res = await fetch('/api/grading', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(formData.value)
-    })
-    
-    if (!res.ok) {
-      throw new Error('Failed to submit grading')
-    }
-    
-    const response: GradingResponse = await res.json()
-    emit('grading-response', response)
-  } catch (err) {
-    emit('grading-error', err instanceof Error ? err.message : 'An error occurred')
+    const response = await submitGradingRequest(formData.value);
+    emit('grading-response', response);
+  } catch (error) {
+    emit('grading-error', error instanceof Error ? error.message : 'An error occurred');
   } finally {
-    loading.value = false
+    loading.value = false;
   }
-}
+};
 </script>
 
 <template>
   <div class="bg-white shadow-md rounded-lg p-6 mb-8">
     <h2 class="text-2xl font-bold mb-6">Grading Form</h2>
-    
+
+    <!-- Repository URL Input -->
+    <div class="mb-6">
+      <label class="block text-gray-700 text-sm font-bold mb-2">
+        Repository URL
+      </label>
+      <input 
+        v-model="formData.repository_url"
+        type="text"
+        placeholder="Enter repository URL"
+        class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+      />
+    </div>
+
+    <!-- Branch Input -->
     <div class="mb-6">
       <label class="block text-gray-700 text-sm font-bold mb-2">
         Branch
@@ -64,6 +67,7 @@ const submitGrading = async () => {
       />
     </div>
 
+    <!-- Questions Input -->
     <div class="mb-6">
       <div class="flex justify-between items-center mb-2">
         <label class="block text-gray-700 text-sm font-bold">
@@ -78,8 +82,7 @@ const submitGrading = async () => {
         </button>
       </div>
       
-      <div v-for="(question, index) in formData.questions" :key="index" 
-           class="mb-4 relative">
+      <div v-for="(question, index) in formData.questions" :key="index" class="mb-4 relative">
         <textarea
           v-model="formData.questions[index]"
           rows="4"
@@ -97,9 +100,10 @@ const submitGrading = async () => {
       </div>
     </div>
 
+    <!-- Submit Button -->
     <button
       @click="submitGrading"
-      :disabled="loading || !formData.branch || formData.questions.some(q => !q.trim())"
+      :disabled="loading || !formData.repository_url || !formData.branch || formData.questions.some(q => !q.trim())"
       class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline disabled:opacity-50"
     >
       {{ loading ? 'Submitting...' : 'Submit Grading' }}
