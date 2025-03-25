@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue';
+import { computed, ref } from 'vue';
 import { scanRepositoryBranches, submitGradingRequest } from '../services/gradingService';
 import type { GradingRequest, GradingResponse } from '../model/grading';
 
@@ -26,13 +26,9 @@ const scanRepository = async () => {
 
   scanning.value = true;
   try {
-    const response = await scanRepositoryBranches(formData.value.repository_url);
-
-    if (response.status === 'success') {
-      branches.value = response.branches;
-    } else {
-      emit('grading-error', 'Failed to fetch branches.');
-    }
+    const response = await scanRepositoryBranches(formData.value.repository_url);            
+    branches.value = response.data;
+    formData.value.branch = branches.value[branches.value.length - 1]
   } catch (error) {
     emit('grading-error', error instanceof Error ? error.message : 'An error occurred while scanning the repository.');
   } finally {
@@ -66,6 +62,16 @@ const addQuestion = () => {
 const removeQuestion = (index: number) => {
   formData.value.questions.splice(index, 1);
 };
+
+const questionErrors = computed(() =>
+  formData.value.questions.map(q => q.trim().length < 15)
+);
+
+const isFormValid = computed(() =>
+  formData.value.repository_url.trim() &&
+  formData.value.branch &&
+  formData.value.questions.every(q => q.trim().length >= 15)
+);
 </script>
 
 <template>
@@ -125,9 +131,14 @@ const removeQuestion = (index: number) => {
         <textarea
           v-model="formData.questions[index]"
           rows="4"
-          placeholder="Enter question"
-          class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline pr-10"
+          placeholder="Enter question (min 15 characters)"
+          :class="[
+            'shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline pr-10',
+            questionErrors[index] ? 'border-red-500' : ''
+          ]"
         ></textarea>
+
+        <!-- Tombol hapus -->
         <button
           v-if="formData.questions.length > 1"
           @click="removeQuestion(index)"
@@ -136,7 +147,11 @@ const removeQuestion = (index: number) => {
         >
           ×
         </button>
+
+        <!-- Pesan error -->
+        <p v-if="questionErrors[index]" class="text-red-500 text-sm mt-1">Question must be at least 15 characters.</p>
       </div>
+
     </div>
 
     <!-- Submit Button -->

@@ -1,12 +1,10 @@
 export interface GradingQuestion {
-    question: string;
-    result: 'Lulus' | 'Gagal';
+    question: string;    
     review: string;
   }
   
 export interface GradingResponse {
-    details: GradingQuestion[];
-    grade: number;
+    data: GradingQuestion[];    
 }
   
 export interface GradingRequest {
@@ -16,7 +14,7 @@ export interface GradingRequest {
 }
 
 export interface ScanBranchResponse {
-    branches: string[];
-    status: string;
+    data: string[];
+    message: string;
   }
   
